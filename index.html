@@ -1,0 +1,140 @@
+﻿<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>Oust Hospital System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+body{margin:0;font-family:'Segoe UI',Tahoma;background:#eef3f7;display:flex;flex-direction:column;min-height:100vh}
+.sidebar{width:260px;background:#0f2027;color:#fff;padding:20px;display:flex;flex-direction:column;flex-shrink:0}
+.sidebar h2{text-align:center;color:#00d2ff}
+.menu-btn{background:none;border:none;color:#ddd;padding:12px;text-align:right;border-radius:6px;margin-bottom:8px;font-size:1em;cursor:pointer}
+.menu-btn.active,.menu-btn:hover{background:rgba(255,255,255,.15);color:#00d2ff}
+.content{flex:1;padding:15px;overflow:auto}
+.section{display:none;background:#fff;padding:15px;border-radius:12px;box-shadow:0 5px 15px rgba(0,0,0,.1)}
+.section.active{display:block}
+h1{border-bottom:3px solid #00d2ff;display:inline-block}
+input,select{width:100%;padding:10px;margin-bottom:10px;border:1px solid #ccc;border-radius:6px}
+.btn{padding:10px 15px;border:none;border-radius:6px;font-weight:bold;cursor:pointer}
+.btn-success{background:#27ae60;color:#fff}
+.btn-danger{background:#e74c3c;color:#fff}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th,td{border:1px solid #ddd;padding:10px;text-align:center}
+th{background:#0f2027;color:#fff}
+.invoice{border:2px dashed #00d2ff;padding:15px;margin-top:15px;border-radius:10px}
+.meds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
+.med-item{border:1px solid #ccc;padding:10px;border-radius:10px;text-align:center;background:#f9faff;transition:0.2s;cursor:pointer}
+.selected{background:#a0e7ff}
+.med-info{margin-top:10px;padding:10px;border:1px dashed #00d2ff;border-radius:10px;background:#f0fcff}
+/* Responsive */
+@media (min-width: 768px) {body{flex-direction:row}.content{padding:25px}}
+@media (max-width: 767px) {.sidebar{width:100%;flex-direction:row;overflow-x:auto}.menu-btn{flex:1;white-space:nowrap;margin-right:5px}.content{padding:10px}table,.meds-grid{font-size:14px}}
+</style>
+</head>
+<body>
+<div class="sidebar">
+<h2>Oust Hospital</h2>
+<button class="menu-btn active" id="btnDoctors">👨‍⚕️ الأطباء</button>
+<button class="menu-btn" id="btnPatients">🧑‍🤝‍🧑 المرضى</button>
+<button class="menu-btn" id="btnPharmacy">💊 الصيدلية</button>
+<button class="menu-btn" id="btnBilling">🧾 الفواتير</button>
+</div>
+<div class="content">
+<div id="doctors" class="section active">
+<h1>إدارة الأطباء</h1>
+<input id="dName" placeholder="اسم الطبيب">
+<input id="dSpec" placeholder="التخصص">
+<input id="dPrice" type="number" placeholder="سعر الكشف">
+<button class="btn btn-success" onclick="addDoctor()">إضافة</button>
+<table id="doctorsTable"></table>
+</div>
+<div id="patients" class="section">
+<h1>إدارة المرضى</h1>
+<input id="pName" placeholder="اسم المريض">
+<input id="pAge" type="number" placeholder="السن">
+<button class="btn btn-success" onclick="addPatient()">إضافة</button>
+<table id="patientsTable"></table>
+</div>
+<div id="pharmacy" class="section">
+<h1>إدارة الصيدلية</h1>
+<div id="medsGrid" class="meds-grid">
+<div class="med-item" data-name="Panadol" data-price="25" onclick="selectMed(this)">💊 Panadol (25)</div>
+<div class="med-item" data-name="Vitamin C" data-price="15" onclick="selectMed(this)">💊 Vitamin C (15)</div>
+<div class="med-item" data-name="Brufen" data-price="22" onclick="selectMed(this)">💊 Brufen (22)</div>
+<div class="med-item" data-name="Aspirin" data-price="12.5" onclick="selectMed(this)">💊 Aspirin (12.5)</div>
+<div class="med-item" data-name="Augmentin" data-price="55" onclick="selectMed(this)">💊 Augmentin (55)</div>
+<div class="med-item" data-name="Zinc" data-price="18" onclick="selectMed(this)">💊 Zinc (18)</div>
+</div>
+<div id="medInfo" class="med-info">اختر دواء لعرض التفاصيل هنا</div>
+</div>
+<div id="billing" class="section">
+<h1>إنشاء فاتورة</h1>
+<select id="patientSelect"></select>
+<select id="doctorSelect"></select>
+<h3>اختيار الأدوية</h3>
+<div id="billingMedsGrid" class="meds-grid"></div>
+<button class="btn btn-success" onclick="createInvoice()">إنشاء فاتورة</button>
+<button class="btn btn-danger" onclick="deleteAllInvoices()">حذف جميع الفواتير</button>
+<div id="invoices"></div>
+</div>
+</div>
+<script>
+function randomTime(){
+  const days=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
+  const hours=['08:00AM','09:00AM','10:00AM','11:00AM','12:00PM','01:00PM','02:00PM','03:00PM','04:00PM'];
+  return days[Math.floor(Math.random()*days.length)]+' '+hours[Math.floor(Math.random()*hours.length)];
+}
+let doctors=[
+  {id:101,name:"أبرام فادي",spec:"قلب",price:250,time:randomTime()},
+  {id:102,name:"عمرو حسني",spec:"باطنة",price:200,time:randomTime()},
+  {id:103,name:"محمد صبحي",spec:"عظام",price:300,time:randomTime()},
+  {id:104,name:"عبد الله علي",spec:"جلدية",price:180,time:randomTime()},
+  {id:105,name:"محمد",spec:"مخ وأعصاب",price:350,time:randomTime()}
+];
+let patients=[];
+let invoices=[];
+let medicines=[
+  {name:"Panadol",price:25},
+  {name:"Vitamin C",price:15},
+  {name:"Brufen",price:22},
+  {name:"Aspirin",price:12.5},
+  {name:"Augmentin",price:55},
+  {name:"Zinc",price:18}
+];
+function render(){
+  doctorsTable.innerHTML=`<tr><th>الاسم</th><th>التخصص</th><th>السعر</th><th>ميعاد</th><th></th></tr>`+doctors.map(d=>`<tr><td>${d.name}</td><td>${d.spec}</td><td>${d.price}</td><td>${d.time}</td><td><button class='btn btn-danger' onclick='deleteDoctor(${d.id})'>حذف</button></td></tr>`).join('');
+  patientsTable.innerHTML=`<tr><th>ID</th><th>الاسم</th><th>السن</th><th></th></tr>`+patients.map(p=>`<tr><td>${p.id}</td><td>${p.name}</td><td>${p.age}</td><td><button class='btn btn-danger' onclick='deletePatient(${p.id})'>حذف</button></td></tr>`).join('');
+  patientSelect.innerHTML=patients.map(p=>`<option value='${p.id}'>${p.name} - ${p.age} سنة</option>`).join('');
+  doctorSelect.innerHTML=doctors.map(d=>`<option value='${d.id}'>${d.name} - ${d.spec} - ${d.price} جنيه - ${d.time}</option>`).join('');
+
+  let billingGrid=document.getElementById('billingMedsGrid');
+  billingGrid.innerHTML=medicines.map(m=>`<div class='med-item' data-name='${m.name}' data-price='${m.price}' onclick='selectMed(this)'>💊 ${m.name} (${m.price})</div>`).join('');
+
+  invoicesDiv=document.getElementById('invoices');
+  invoicesDiv.innerHTML=invoices.map(inv=>`<div class='invoice'><strong>رقم الفاتورة:</strong> ${inv.id}<br><strong>المريض:</strong> ${inv.patient}<br><strong>الدكتور:</strong> ${inv.doctor} - ${inv.doctorSpec} - ${inv.doctorTime}<br><strong>الأدوية:</strong> ${inv.meds.map(m=>m.name).join(', ')}<br><strong>الإجمالي:</strong> ${inv.total} جنيه<br><button class='btn btn-danger' onclick='deleteInvoice(${inv.id})'>حذف الفاتورة</button></div>`).join('');
+}
+function addDoctor(){doctors.push({id:Date.now(),name:dName.value,spec:dSpec.value,price:+dPrice.value,time:randomTime()});dName.value=dSpec.value=dPrice.value='';render();}
+function deleteDoctor(id){doctors=doctors.filter(d=>d.id!==id);render();}
+function addPatient(){patients.push({id:Date.now(),name:pName.value,age:+pAge.value});pName.value=pAge.value='';render();}
+function deletePatient(id){patients=patients.filter(p=>p.id!==id);render();}
+function selectMed(el){el.classList.toggle('selected');document.getElementById('medInfo').innerHTML=`دواء: ${el.dataset.name} <br>السعر: ${el.dataset.price} جنيه`;}
+function createInvoice(){
+  let patient=patients.find(p=>p.id==patientSelect.value);
+  let doctor=doctors.find(d=>d.id==doctorSelect.value);
+  if(!patient||!doctor){alert('اختر المريض والدكتور');return;}
+  let selectedMeds=Array.from(document.querySelectorAll('#billingMedsGrid .med-item.selected')).map(m=>({name:m.dataset.name,price:+m.dataset.price}));
+  let total=doctor.price+selectedMeds.reduce((sum,m)=>sum+m.price,0);
+  invoices.push({id:Date.now(),patient:patient.name,doctor:doctor.name,doctorSpec:doctor.spec,doctorTime:doctor.time,meds:selectedMeds,total:total});
+  render();
+}
+function deleteInvoice(id){if(confirm('هل أنت متأكد من حذف هذه الفاتورة؟')){invoices=invoices.filter(inv=>inv.id!==id);render();}}
+function deleteAllInvoices(){if(confirm('هل أنت متأكد من حذف جميع الفواتير؟')){invoices=[];render();}}
+btnDoctors.onclick=()=>showSection('doctors',btnDoctors);
+btnPatients.onclick=()=>showSection('patients',btnPatients);
+btnPharmacy.onclick=()=>showSection('pharmacy',btnPharmacy);
+btnBilling.onclick=()=>showSection('billing',btnBilling);
+function showSection(id,btn){document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');document.querySelectorAll('.menu-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');render();}
+render();
+</script>
+</body>
+</html>
